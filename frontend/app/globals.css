@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes session-item-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.session-item-enter {
+  animation: session-item-enter 0.35s ease-out both;
+}
+
+.session-sidebar-grid {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  transition: grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 768px) {
+  .session-sidebar-grid.is-open {
+    grid-template-columns: 56px 300px minmax(0, 1fr);
+  }
+
+  .session-sidebar-grid.is-closed {
+    grid-template-columns: 56px 0px minmax(0, 1fr);
+  }
+}
+
+.session-sidebar-slide {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.session-sidebar-slide.is-open {
+  transform: translateX(0);
+}
+
+.session-sidebar-slide.is-closed {
+  transform: translateX(-300px);
+}
+
+.session-sidebar-mobile {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.session-sidebar-mobile.is-open {
+  transform: translateX(0);
+}
+
+.session-sidebar-mobile.is-closed {
+  transform: translateX(-300px);
+}
+
+.session-sidebar-aside {
+  transition:
+    width 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.38s ease;
+  will-change: width;
+}
+
+.session-sidebar-panel {
+  transition:
+    transform 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.28s ease;
+  will-change: transform, opacity;
+}
+
+.session-sidebar-panel.is-open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.session-sidebar-panel.is-closed {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.session-chat-main {
+  transition: flex 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.session-overlay {
+  animation: session-overlay-in 0.3s ease-out;
+}
+
+@keyframes session-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-item-enter,
+  .session-sidebar-grid,
+  .session-sidebar-slide,
+  .session-sidebar-mobile,
+  .session-sidebar-aside,
+  .session-sidebar-panel,
+  .session-chat-main,
+  .session-overlay {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,28 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  # Tuỳ chọn — chỉ dùng khi KHÔNG có MySQL local trên port 3306.
+  # Chạy: docker compose --profile mysql up -d
+  mysql:
+    profiles: ["mysql"]
+    image: mysql:8.4
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: edu_chatbot
+      MYSQL_USER: edu
+      MYSQL_PASSWORD: edu123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+volumes:
+  qdrant_storage:
+  mysql_data:
