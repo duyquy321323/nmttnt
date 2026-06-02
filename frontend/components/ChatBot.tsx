@@ -91,14 +91,14 @@ export function ChatBot() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       {offline && (
         <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           Mạng đang yếu hoặc mất kết nối. Tin nhắn có thể gửi chậm — em thử lại sau nhé.
         </p>
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-6" style={{ minHeight: "420px" }}>
+      <div className="flex-1 min-h-0 space-y-4 overflow-y-auto p-6">
         {messages.map((message, index) => (
           <div
             key={index}

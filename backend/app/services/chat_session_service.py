@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
+from app.models.chat_interaction_log import ChatInteractionLog
 from app.models.chat_session import ChatMessage, ChatSession, MessageRole
 from app.models.user import User
 
@@ -85,6 +86,9 @@ class ChatSessionService:
         )
         if session is None:
             return False
+        db.query(ChatInteractionLog).filter(ChatInteractionLog.session_id == session_id).delete(
+            synchronize_session=False,
+        )
         db.delete(session)
         db.commit()
         return True

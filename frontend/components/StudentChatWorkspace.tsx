@@ -394,7 +394,7 @@ export function StudentChatWorkspace() {
         </div>
 
         {/* Chat — full phần còn lại của body */}
-        <section className="flex min-w-0 flex-col bg-white">
+        <section className="flex min-w-0 flex-1 min-h-0 flex-col bg-white">
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-3">
           {activeSession ? (
             <>
@@ -442,7 +442,7 @@ export function StudentChatWorkspace() {
                 Mạng yếu — em có thể thử gửi lại nếu tin nhắn không đi.
               </p>
             )}
-            <div className="mx-auto w-full max-w-4xl flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <div className="mx-auto w-full max-w-4xl flex-1 min-h-0 space-y-4 overflow-y-auto px-5 py-4">
               {activeSession.messages.map((message) => (
                 <div
                   key={message.id}

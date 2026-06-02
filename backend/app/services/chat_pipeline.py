@@ -1,5 +1,7 @@
 """Pipeline chat robustness — normalize, policy, clarification, RAG, log."""
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -17,9 +19,13 @@ from app.services.explainability_service import (
     build_explainability_hint,
     validate_explanation,
 )
+from app.prompt import get_prompt
 from app.services.metadata_extractor import extract_metadata_from_question, merge_metadata_filters
 from app.services.query_normalizer import normalize_user_query
 from app.services.rag_service import get_rag_service
+
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_metadata_filter(
@@ -50,6 +56,43 @@ def _map_rag_fallback(rag_result: dict) -> FallbackReason:
     if "chưa tồn tại" in answer or "chờ giáo viên tải" in answer:
         return FallbackReason.NO_DOCUMENTS
     return FallbackReason.NO_MATCH
+
+
+def _format_history(history: list[dict] | None) -> str:
+    if not history:
+        return ""
+    lines: list[str] = []
+    for item in history[-20:]:
+        role = item.get("role", "user")
+        label = "Học sinh" if role == "user" else "Chatbot"
+        lines.append(f"{label}: {item.get('content', '')}")
+    return "Lịch sử hội thoại gần đây:\n" + "\n".join(lines)
+
+
+def _build_rag_prompts(
+    question: str,
+    context: str,
+    history: list[dict] | None,
+    explainability_hint: str,
+) -> tuple[str, str]:
+    base = get_prompt("chat/rag_system_instruction.md").strip()
+    fairness = get_prompt("chat/fairness_guidelines.md").strip()
+    robustness = get_prompt("chat/robustness_guidelines.md").strip()
+    explainability = get_prompt("chat/explainability_guidelines.md").strip()
+    system_prompt = f"{base}\n\n{fairness}\n\n{robustness}\n\n{explainability}"
+
+    history_text = _format_history(history)
+    hint_block = explainability_hint.strip() or "Tuân thủ explainability guidelines."
+    user_content = get_prompt(
+        "chat/rag_user_template.md",
+        context=context,
+        question=question,
+        explainability_hint=hint_block,
+    )
+    if history_text:
+        user_content = f"{history_text}\n{user_content}"
+
+    return system_prompt, user_content
 
 
 async def process_chat(
@@ -179,23 +222,47 @@ async def process_chat(
     try:
         chatbot_service = get_chatbot_service()
         explain_hint = build_explainability_hint(normalized, history)
+        system_prompt, user_content = _build_rag_prompts(
+            normalized,
+            rag_result["context"],
+            history,
+            explain_hint,
+        )
         answer = await chatbot_service.generate_with_context(
             normalized,
             rag_result["context"],
             history=history,
             explainability_hint=explain_hint,
+            system_prompt=system_prompt,
+            user_content=user_content,
         )
         explanation = validate_explanation(answer, normalized)
         if not explanation["meets_standard"]:
             retry_hint = f"{RETRY_EXPLANATION_HINT}\n{explain_hint}"
+            system_prompt, user_content = _build_rag_prompts(
+                normalized,
+                rag_result["context"],
+                history,
+                retry_hint,
+            )
             answer = await chatbot_service.generate_with_context(
                 normalized,
                 rag_result["context"],
                 history=history,
                 explainability_hint=retry_hint,
+                system_prompt=system_prompt,
+                user_content=user_content,
             )
             explanation = validate_explanation(answer, normalized)
     except Exception:
+        logger.exception(
+            "process_chat failed stage=rag_generation question=%s from_rag=%s top_score=%s sources=%d chunks=%d",
+            normalized,
+            rag_result.get("from_rag"),
+            top_score,
+            len(rag_result.get("sources", [])),
+            len(chunks),
+        )
         answer = API_ERROR_MESSAGE
         interaction_id = None
         if db is not None:
