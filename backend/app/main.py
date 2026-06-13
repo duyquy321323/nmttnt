@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+import logging
+import re
 
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.api_v1.api import api_router
@@ -10,7 +12,8 @@ from app.db.init_db import ensure_default_admin, ensure_documents_storage
 from app.db.session import SessionLocal
 from app.services.embedding_service import get_embedding_service
 from app.services.rag_service import get_rag_service
-import re
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -71,7 +74,14 @@ class DynamicCORSMiddleware(BaseHTTPMiddleware):
             return Response(status_code=200, headers=headers)
 
         # Process the actual request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception("Unhandled error for %s %s", request.method, request.url.path)
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"},
+            )
 
         # Add CORS headers to response
         if is_allowed and origin:

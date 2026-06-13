@@ -1,16 +1,31 @@
-# Dependencies for FastAPI + RAG + Gemini (no local LLM)
+# Production API (Passenger / shared hosting, no local LLM, no GPU).
+#
+# Install (saves disk — no NVIDIA/CUDA wheels):
+#   pip install --no-cache-dir -r requirements-api.txt
+#
+# Local dev with auto-reload still needs uvicorn:
+#   pip install uvicorn[standard]
+#
+# CPU-only PyTorch MUST be declared before sentence-transformers,
+# otherwise pip pulls ~2GB of nvidia-* CUDA packages.
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+a2wsgi>=1.10.0
 fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
 python-multipart>=0.0.12
 pydantic-settings>=2.6.0
-qdrant-client>=1.9.0
-sentence-transformers>=3.0.0
-python-docx>=1.1.0
-pypdf>=5.0.0
-google-genai>=1.0.0
 sqlalchemy>=2.0.0
 alembic>=1.14.0
 python-jose[cryptography]>=3.3.0
 bcrypt>=4.0.0
 pymysql>=1.1.0
 cryptography>=42.0.0
+google-genai>=1.0.0
+qdrant-client>=1.9.0
+python-docx>=1.1.0
+pypdf>=5.0.0
+
+# RAG embeddings (CPU)
+torch>=2.2.0,<3.0.0
+sentence-transformers>=3.0.0,<4.0.0

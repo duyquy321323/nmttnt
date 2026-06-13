@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Activity, AlertTriangle, MessageSquare, RefreshCw, ThumbsUp } from "lucide-react";
 
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 
@@ -37,6 +42,13 @@ const REASON_LABELS: Record<string, string> = {
   api_error: "Lỗi API",
 };
 
+const STAT_CARDS = [
+  { key: "total", label: "Tổng tương tác", icon: MessageSquare, color: "text-brand" },
+  { key: "failed", label: "Thất bại / fallback", icon: AlertTriangle, color: "text-red-500" },
+  { key: "reask", label: "Hỏi lại (re-ask)", icon: RefreshCw, color: "text-amber-500" },
+  { key: "clarification", label: "Cần làm rõ", icon: Activity, color: "text-sky-500" },
+] as const;
+
 export default function TeacherAnalyticsPage() {
   const { user, loading } = useRequireRole("teacher");
   const [report, setReport] = useState<AnalyticsReport | null>(null);
@@ -54,70 +66,97 @@ export default function TeacherAnalyticsPage() {
   }, [loading, user]);
 
   if (loading || !user) {
-    return <div className="p-8 text-zinc-500">Đang tải...</div>;
+    return <LoadingState />;
   }
 
   if (!report) {
-    return <div className="p-8 text-red-600">{error || "Đang tải báo cáo..."}</div>;
+    return (
+      <PageContainer>
+        <StatusMessage variant="error">{error || "Đang tải báo cáo..."}</StatusMessage>
+      </PageContainer>
+    );
   }
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-zinc-900">Robustness — Giám sát chatbot</h1>
-      <p className="mt-2 text-sm text-zinc-500">
-        Log câu hỏi thất bại, re-ask, hỏi lại và đánh giá giáo viên. Prompt version:{" "}
-        <code className="rounded bg-zinc-100 px-1">{report.prompt_version}</code>
-      </p>
+  const statValues: Record<string, number> = {
+    total: report.total_interactions,
+    failed: report.failed_count,
+    reask: report.reask_count,
+    clarification: report.clarification_count,
+  };
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Tổng tương tác", report.total_interactions],
-          ["Thất bại / fallback", report.failed_count],
-          ["Hỏi lại (re-ask)", report.reask_count],
-          ["Cần làm rõ", report.clarification_count],
-        ].map(([label, value]) => (
-          <div key={label as string} className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <p className="text-xs text-zinc-500">{label}</p>
-            <p className="mt-1 text-2xl font-semibold">{value}</p>
+  return (
+    <PageContainer>
+      <PageHeader
+        title="Giám sát chatbot"
+        description={
+          <>
+            Log câu hỏi thất bại, re-ask, hỏi lại và đánh giá. Prompt version:{" "}
+            <code className="rounded bg-surface-inset px-1.5 py-0.5 font-mono text-xs text-brand-text">
+              {report.prompt_version}
+            </code>
+          </>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {STAT_CARDS.map(({ key, label, icon: Icon, color }) => (
+          <div key={key} className="card p-4">
+            <div className="flex items-center gap-2">
+              <Icon size={16} className={color} />
+              <p className="text-xs text-text-muted">{label}</p>
+            </div>
+            <p className="mt-2 text-2xl font-semibold text-text">{statValues[key]}</p>
           </div>
         ))}
       </div>
 
+      {report.positive_feedback_rate !== null && (
+        <div className="card mt-4 flex items-center gap-3 p-4">
+          <ThumbsUp size={18} className="text-green-500" />
+          <div>
+            <p className="text-xs text-text-muted">Tỷ lệ phản hồi tích cực</p>
+            <p className="text-lg font-semibold text-text">
+              {(report.positive_feedback_rate * 100).toFixed(1)}%
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <h2 className="font-semibold">Theo loại fallback</h2>
-          <ul className="mt-3 space-y-2 text-sm">
+        <div className="card p-5">
+          <h2 className="section-heading">Theo loại fallback</h2>
+          <ul className="space-y-2 text-sm">
             {Object.entries(report.by_fallback_reason).map(([key, count]) => (
-              <li key={key} className="flex justify-between">
-                <span>{REASON_LABELS[key] ?? key}</span>
-                <span className="font-medium">{count}</span>
+              <li key={key} className="flex justify-between border-b border-border-soft py-2 last:border-0">
+                <span className="text-text-muted">{REASON_LABELS[key] ?? key}</span>
+                <span className="font-medium text-text">{count}</span>
               </li>
             ))}
             {Object.keys(report.by_fallback_reason).length === 0 && (
-              <li className="text-zinc-500">Chưa có dữ liệu.</li>
+              <li className="text-text-muted">Chưa có dữ liệu.</li>
             )}
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-          <h2 className="font-semibold">Lỗi theo môn</h2>
-          <ul className="mt-3 space-y-2 text-sm">
+        <div className="card p-5">
+          <h2 className="section-heading">Lỗi theo môn</h2>
+          <ul className="space-y-2 text-sm">
             {Object.entries(report.by_subject).map(([subject, count]) => (
-              <li key={subject} className="flex justify-between">
-                <span>{subject}</span>
-                <span className="font-medium">{count}</span>
+              <li key={subject} className="flex justify-between border-b border-border-soft py-2 last:border-0">
+                <span className="text-text-muted">{subject}</span>
+                <span className="font-medium text-text">{count}</span>
               </li>
             ))}
             {Object.keys(report.by_subject).length === 0 && (
-              <li className="text-zinc-500">Chưa có dữ liệu.</li>
+              <li className="text-text-muted">Chưa có dữ liệu.</li>
             )}
           </ul>
         </div>
       </div>
 
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
+      <div className="table-wrap mt-8 overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-600">
+          <thead className="table-head">
             <tr>
               <th className="px-4 py-3">Câu hỏi</th>
               <th className="px-4 py-3">Lý do</th>
@@ -127,22 +166,22 @@ export default function TeacherAnalyticsPage() {
           </thead>
           <tbody>
             {report.recent_failures.map((row) => (
-              <tr key={row.id} className="border-t border-zinc-100">
-                <td className="max-w-xs truncate px-4 py-3">{row.question}</td>
-                <td className="px-4 py-3">
+              <tr key={row.id} className="table-row">
+                <td className="max-w-xs truncate px-4 py-3 text-text">{row.question}</td>
+                <td className="px-4 py-3 text-text-muted">
                   {REASON_LABELS[row.fallback_reason ?? ""] ?? row.fallback_reason}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-text-muted">
                   {[row.subject, row.lesson ? `bài ${row.lesson}` : null]
                     .filter(Boolean)
                     .join(" · ") || "—"}
                 </td>
-                <td className="px-4 py-3">{row.is_reask ? "Có" : "—"}</td>
+                <td className="px-4 py-3 text-text-muted">{row.is_reask ? "Có" : "—"}</td>
               </tr>
             ))}
             {report.recent_failures.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={4} className="px-4 py-10 text-center text-text-muted">
                   Chưa có log thất bại.
                 </td>
               </tr>
@@ -151,7 +190,11 @@ export default function TeacherAnalyticsPage() {
         </table>
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-    </div>
+      {error && (
+        <StatusMessage variant="error" className="mt-4">
+          {error}
+        </StatusMessage>
+      )}
+    </PageContainer>
   );
 }

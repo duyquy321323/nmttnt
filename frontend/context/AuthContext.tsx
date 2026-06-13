@@ -28,7 +28,7 @@ function redirectByRole(role: UserRole, mustChangePassword: boolean) {
     if (role === "teacher") return "/teacher/change-password";
     if (role === "student") return "/student/change-password";
   }
-  if (role === "admin") return "/admin/teachers";
+  if (role === "admin") return "/admin";
   if (role === "teacher") return "/teacher/documents";
   if (role === "student") return "/";
   return "/";
@@ -105,7 +105,7 @@ export function useRequireRole(role: UserRole) {
       return;
     }
     if (user.role !== role) {
-      router.replace("/");
+      router.replace(redirectByRole(user.role, user.must_change_password));
       return;
     }
     if (role === "teacher" && user.must_change_password) {

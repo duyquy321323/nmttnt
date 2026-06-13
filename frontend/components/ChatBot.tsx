@@ -1,8 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { MarkdownMessage } from "@/components/MarkdownMessage";
+import { ChatMessage } from "@/components/chat/ChatMessage";
+import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { ChatInputBar } from "@/components/ChatInputBar";
+import { Button } from "@/components/ui/button";
+import { useSpeechOutput } from "@/hooks/useSpeechOutput";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { api, NetworkError } from "@/lib/api";
 import type { ChatResponse } from "@/types";
 
@@ -13,12 +18,14 @@ interface Message {
   interactionId?: number;
 }
 
+const AUTO_SPEAK_KEY = "chat_auto_speak";
+
 export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Xin chào! Mình là chatbot hỗ trợ học tập. Bạn có thể hỏi mình về nội dung tài liệu đã được giáo viên tải lên.",
+        "Xin chào! Mình là chatbot hỗ trợ học tập. Em có thể **gõ** hoặc **bấm micro** để hỏi cô nhé.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -26,6 +33,19 @@ export function ChatBot() {
   const [error, setError] = useState("");
   const [offline, setOffline] = useState(false);
   const [lastFailedMessage, setLastFailedMessage] = useState("");
+  const [autoSpeak, setAutoSpeak] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(AUTO_SPEAK_KEY) === "true";
+  });
+  const lastSpokenRef = useRef<number>(-1);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { supported: ttsSupported, speaking, speakingId, highlightWordIndex, speak, stopSpeaking } =
+    useSpeechOutput();
+
+  useEffect(() => {
+    localStorage.setItem(AUTO_SPEAK_KEY, String(autoSpeak));
+  }, [autoSpeak]);
 
   useEffect(() => {
     const syncOnline = () => setOffline(!navigator.onLine);
@@ -38,14 +58,22 @@ export function ChatBot() {
     };
   }, []);
 
-  async function sendMessage(message: string) {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const sendMessage = useCallback(async (message: string) => {
+    const text = message.trim();
+    if (!text) return;
+
     setError("");
     setLastFailedMessage("");
-    setMessages((prev) => [...prev, { role: "user", content: message }]);
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
     setLoading(true);
 
     try {
-      const response = await api.post<ChatResponse>("/api/v1/chat/chat", { message });
+      const response = await api.post<ChatResponse>("/api/v1/chat/chat", { message: text });
       setMessages((prev) => [
         ...prev,
         {
@@ -56,8 +84,8 @@ export function ChatBot() {
         },
       ]);
     } catch (err) {
-      setInput(message);
-      setLastFailedMessage(message);
+      setInput(text);
+      setLastFailedMessage(text);
       if (err instanceof NetworkError) {
         setError(err.message);
       } else {
@@ -66,19 +94,42 @@ export function ChatBot() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  const voice = useVoiceInput({
+    onFinalText: (text) => {
+      setInput(text);
+      if (!loading) {
+        void sendMessage(text);
+      }
+    },
+    onInterimText: (text) => setInput(text),
+  });
+
+  useEffect(() => {
+    if (!autoSpeak || !ttsSupported) return;
+
+    const lastIndex = messages.length - 1;
+    const last = messages[lastIndex];
+    if (
+      last?.role === "assistant" &&
+      lastIndex > 0 &&
+      lastIndex !== lastSpokenRef.current &&
+      !loading
+    ) {
+      lastSpokenRef.current = lastIndex;
+      void speak(last.content, lastIndex);
+    }
+  }, [messages, autoSpeak, ttsSupported, loading, speak]);
+
+  async function handleSubmit() {
     const message = input.trim();
     if (!message || loading) return;
-    setInput("");
     await sendMessage(message);
   }
 
   async function handleRetry() {
     if (!lastFailedMessage || loading) return;
-    setInput("");
     await sendMessage(lastFailedMessage);
   }
 
@@ -90,90 +141,80 @@ export function ChatBot() {
     }
   }
 
+  function handleSpeak(content: string, messageIndex: number) {
+    if (speaking && speakingId === messageIndex) {
+      stopSpeaking();
+    } else {
+      void speak(content, messageIndex);
+    }
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface">
+      <div className="shrink-0 border-b border-border bg-surface-raised px-5 py-2.5">
+        <p className="text-xs text-text-muted">
+          Hỏi đáp học tập — không cần đăng nhập. Học sinh đăng nhập để lưu lịch sử theo session.
+        </p>
+      </div>
+
       {offline && (
-        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        <p className="alert-warning">
           Mạng đang yếu hoặc mất kết nối. Tin nhắn có thể gửi chậm — em thử lại sau nhé.
         </p>
       )}
 
-      <div className="flex-1 min-h-0 space-y-4 overflow-y-auto p-6">
+      <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-6 py-5 scrollbar-thin">
         {messages.map((message, index) => (
-          <div
+          <ChatMessage
             key={index}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : message.needsClarification
-                    ? "border border-amber-200 bg-amber-50 text-amber-950"
-                    : "bg-zinc-100 text-zinc-800"
-              }`}
-            >
-              {message.role === "assistant" ? (
-                <MarkdownMessage content={message.content} />
-              ) : (
-                message.content
-              )}
-              {message.role === "assistant" && message.interactionId && (
-                <div className="mt-2 flex gap-2 border-t border-zinc-200/60 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleFeedback(message.interactionId!, 1)}
-                    className="text-xs text-zinc-500 hover:text-green-600"
-                  >
-                    Hữu ích
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleFeedback(message.interactionId!, -1)}
-                    className="text-xs text-zinc-500 hover:text-red-600"
-                  >
-                    Chưa rõ
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+            role={message.role}
+            content={message.content}
+            clarification={message.needsClarification}
+            messageId={index}
+            interactionId={message.interactionId}
+            speaking={speaking && speakingId === index}
+            highlightWordIndex={speakingId === index ? highlightWordIndex : null}
+            ttsSupported={ttsSupported}
+            onSpeak={() => handleSpeak(message.content, index)}
+            onFeedback={
+              message.interactionId
+                ? (rating) => handleFeedback(message.interactionId!, rating)
+                : undefined
+            }
+          />
         ))}
-        {loading && <div className="text-sm text-zinc-500">Đang trả lời...</div>}
+        {loading && <TypingIndicator />}
+        <div ref={messagesEndRef} />
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 px-6 pb-2">
+        <div className="flex shrink-0 items-center gap-3 border-t border-border-soft px-6 py-2">
           <p className="text-sm text-red-600">{error}</p>
           {lastFailedMessage && (
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="rounded-lg border border-zinc-300 px-3 py-1 text-xs hover:bg-zinc-50"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
               Thử lại
-            </button>
+            </Button>
           )}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="border-t border-zinc-200 p-4">
-        <div className="flex gap-3">
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Nhập câu hỏi của bạn..."
-            className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={loading || offline}
-            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            Gửi
-          </button>
-        </div>
-      </form>
+      <div className="shrink-0 border-t border-border bg-surface-raised px-6 py-3">
+        <ChatInputBar
+          value={input}
+          onChange={setInput}
+          onSubmit={handleSubmit}
+          loading={loading}
+          disabled={offline}
+          placeholder="Nhập câu hỏi hoặc bấm micro..."
+          voiceSupported={voice.supported}
+          voiceListening={voice.listening}
+          voiceError={voice.error}
+          onVoiceToggle={voice.toggleListening}
+          autoSpeak={autoSpeak}
+          onAutoSpeakChange={setAutoSpeak}
+          autoSpeakSupported={ttsSupported}
+        />
+      </div>
     </div>
   );
 }

@@ -49,7 +49,10 @@ class Settings(BaseSettings):
 
     # Qdrant / RAG settings
     QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: Optional[str] = None
     QDRANT_COLLECTION_NAME: str = "edu_documents"
+    QDRANT_TIMEOUT: int = 120
+    RAG_INGEST_BATCH_SIZE: int = 32
     EMBEDDING_MODEL_NAME: str = (
         "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )

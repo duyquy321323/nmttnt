@@ -3,6 +3,8 @@
 FastAPI Server Runner
 Run this file to start the development server.
 
+Requires: pip install -r requirements-api.txt -r requirements-dev.txt
+
 Reload (mặc định bật): tiến trình cha của uvicorn vẫn chạy để theo dõi file; lỗi import
 ở worker có thể khiến bạn tưởng "không thoát". Để cả process thoát khi cấu hình sai:
 

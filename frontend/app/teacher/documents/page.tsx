@@ -1,7 +1,22 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { Loader2, Upload } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { DocumentItem, MaterialTypeOption } from "@/types";
@@ -39,6 +54,7 @@ export default function TeacherDocumentsPage() {
   const [description, setDescription] = useState("");
   const [metadata, setMetadata] = useState(EMPTY_METADATA);
   const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -73,13 +89,14 @@ export default function TeacherDocumentsPage() {
 
   async function handleUpload(event: FormEvent) {
     event.preventDefault();
-    if (!file) {
-      setError("Vui lòng chọn file.");
+    if (!file || uploading) {
+      if (!file) setError("Vui lòng chọn file.");
       return;
     }
 
     setError("");
     setMessage("");
+    setUploading(true);
     const formData = new FormData();
     formData.append("title", title.trim());
     if (description.trim()) formData.append("description", description.trim());
@@ -96,6 +113,8 @@ export default function TeacherDocumentsPage() {
       await loadDocuments();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Không tải lên được tài liệu.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -133,34 +152,36 @@ export default function TeacherDocumentsPage() {
   }
 
   if (loading || !user) {
-    return <div className="p-8 text-zinc-500">Đang tải...</div>;
+    return <LoadingState />;
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-zinc-900">Quản lý tài liệu</h1>
-      <p className="mt-2 text-sm text-zinc-500">
-        Gắn metadata theo loại học liệu để RAG lọc đúng phạm vi (lớp, môn, bài, mức độ...).
-      </p>
+    <PageContainer>
+      <PageHeader
+        title="Quản lý tài liệu"
+        description="Gắn metadata theo loại học liệu để RAG lọc đúng phạm vi (lớp, môn, bài, mức độ...)."
+      />
 
-      <form
-        onSubmit={handleUpload}
-        className="mt-6 space-y-4 rounded-2xl border border-zinc-200 bg-white p-6"
-      >
+      <form onSubmit={handleUpload} className="card space-y-5 p-6" aria-busy={uploading}>
         <div className="grid gap-4 md:grid-cols-2">
-          <input
-            placeholder="Tiêu đề tài liệu"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            className="rounded-xl border border-zinc-300 px-4 py-3 text-sm"
-            required
-          />
-          <input
-            placeholder="Mô tả (tuỳ chọn)"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="rounded-xl border border-zinc-300 px-4 py-3 text-sm"
-          />
+          <FormField label="Tiêu đề tài liệu" htmlFor="doc-title">
+            <Input
+              id="doc-title"
+              placeholder="Nhập tiêu đề..."
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+              disabled={uploading}
+            />
+          </FormField>
+          <FormField label="Mô tả" htmlFor="doc-desc" hint="Tuỳ chọn">
+            <Input
+              id="doc-desc"
+              placeholder="Mô tả ngắn về tài liệu..."
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </FormField>
         </div>
 
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -172,97 +193,126 @@ export default function TeacherDocumentsPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-          <p className="mb-3 text-sm font-medium text-zinc-800">Metadata RAG</p>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <select
-              value={metadata.material_type}
-              onChange={(event) =>
-                setMetadata((prev) => ({ ...prev, material_type: event.target.value }))
-              }
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            >
-              <option value="">Loại học liệu</option>
-              {materialTypes.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="Lớp (vd: 3)"
-              value={metadata.grade}
-              onChange={(event) => setMetadata((prev) => ({ ...prev, grade: event.target.value }))}
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Môn (vd: Toán)"
-              value={metadata.subject}
-              onChange={(event) =>
-                setMetadata((prev) => ({ ...prev, subject: event.target.value }))
-              }
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Bài (vd: 5)"
-              value={metadata.lesson}
-              onChange={(event) =>
-                setMetadata((prev) => ({ ...prev, lesson: event.target.value }))
-              }
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Mức độ (cơ bản / nâng cao)"
-              value={metadata.level}
-              onChange={(event) => setMetadata((prev) => ({ ...prev, level: event.target.value }))}
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Kỹ năng"
-              value={metadata.skill}
-              onChange={(event) => setMetadata((prev) => ({ ...prev, skill: event.target.value }))}
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Trình độ tiếng Việt"
-              value={metadata.vietnamese_level}
-              onChange={(event) =>
-                setMetadata((prev) => ({ ...prev, vietnamese_level: event.target.value }))
-              }
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
-            <input
-              placeholder="Vùng / văn hóa"
-              value={metadata.region}
-              onChange={(event) =>
-                setMetadata((prev) => ({ ...prev, region: event.target.value }))
-              }
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            />
+        <div className="rounded-xl border border-border bg-muted/40 p-4">
+          <p className="section-heading mb-3">Metadata RAG</p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <FormField label="Loại học liệu">
+              <Select
+                value={metadata.material_type || undefined}
+                onValueChange={(value) =>
+                  setMetadata((prev) => ({ ...prev, material_type: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn loại..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {materialTypes.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Lớp">
+              <Input
+                placeholder="vd: 3"
+                value={metadata.grade}
+                onChange={(event) => setMetadata((prev) => ({ ...prev, grade: event.target.value }))}
+              />
+            </FormField>
+            <FormField label="Môn">
+              <Input
+                placeholder="vd: Toán"
+                value={metadata.subject}
+                onChange={(event) =>
+                  setMetadata((prev) => ({ ...prev, subject: event.target.value }))
+                }
+              />
+            </FormField>
+            <FormField label="Bài">
+              <Input
+                placeholder="vd: 5"
+                value={metadata.lesson}
+                onChange={(event) =>
+                  setMetadata((prev) => ({ ...prev, lesson: event.target.value }))
+                }
+              />
+            </FormField>
+            <FormField label="Mức độ">
+              <Input
+                placeholder="cơ bản / nâng cao"
+                value={metadata.level}
+                onChange={(event) => setMetadata((prev) => ({ ...prev, level: event.target.value }))}
+              />
+            </FormField>
+            <FormField label="Kỹ năng">
+              <Input
+                placeholder="vd: giải toán"
+                value={metadata.skill}
+                onChange={(event) => setMetadata((prev) => ({ ...prev, skill: event.target.value }))}
+              />
+            </FormField>
+            <FormField label="Trình độ tiếng Việt">
+              <Input
+                placeholder="vd: trung bình"
+                value={metadata.vietnamese_level}
+                onChange={(event) =>
+                  setMetadata((prev) => ({ ...prev, vietnamese_level: event.target.value }))
+                }
+              />
+            </FormField>
+            <FormField label="Vùng / văn hóa">
+              <Input
+                placeholder="vd: Tây Nguyên"
+                value={metadata.region}
+                onChange={(event) =>
+                  setMetadata((prev) => ({ ...prev, region: event.target.value }))
+                }
+              />
+            </FormField>
           </div>
         </div>
 
-        <input
-          type="file"
-          accept=".txt,.docx,.pdf"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm"
-          required
-        />
-        <button
-          type="submit"
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Tải lên & reindex
-        </button>
+        <FormField label="File tài liệu" htmlFor="doc-file" hint="Hỗ trợ .txt, .docx, .pdf">
+            <Input
+              id="doc-file"
+              type="file"
+              accept=".txt,.docx,.pdf"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              required
+              disabled={uploading}
+            />
+        </FormField>
+        <Button type="submit" className="w-full sm:w-auto" disabled={uploading}>
+          {uploading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Upload size={16} />
+          )}
+          {uploading ? "Đang tải lên & reindex..." : "Tải lên & reindex"}
+        </Button>
+        {uploading && (
+          <StatusMessage className="flex items-center gap-2">
+            <Loader2 size={16} className="shrink-0 animate-spin text-brand" />
+            <span>
+              Đang xử lý tài liệu (embed + Qdrant). Vui lòng đợi, không bấm lại nút tải.
+            </span>
+          </StatusMessage>
+        )}
       </form>
 
-      {message && <p className="mt-4 text-sm text-green-600">{message}</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {message && <StatusMessage className="mt-4">{message}</StatusMessage>}
+      {error && (
+        <StatusMessage variant="error" className="mt-4">
+          {error}
+        </StatusMessage>
+      )}
 
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
+      <div className="table-wrap mt-8 overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-600">
+          <thead className="table-head">
             <tr>
               <th className="px-4 py-3">Tiêu đề</th>
               <th className="px-4 py-3">File</th>
@@ -274,42 +324,34 @@ export default function TeacherDocumentsPage() {
           </thead>
           <tbody>
             {documents.map((document) => (
-              <tr key={document.id} className="border-t border-zinc-100">
-                <td className="px-4 py-3">{document.title}</td>
-                <td className="px-4 py-3">{document.original_filename}</td>
-                <td className="px-4 py-3 text-xs text-zinc-600">{metadataSummary(document)}</td>
-                <td className="px-4 py-3 text-xs text-zinc-600">
+              <tr key={document.id} className="table-row">
+                <td className="px-4 py-3 font-medium text-text">{document.title}</td>
+                <td className="px-4 py-3 text-text-muted">{document.original_filename}</td>
+                <td className="px-4 py-3 text-xs text-text-muted">{metadataSummary(document)}</td>
+                <td className="px-4 py-3 text-xs text-text-muted">
                   v{document.version}
                   {document.last_indexed_at && (
-                    <span className="block text-zinc-400">
+                    <span className="block text-text-faint">
                       {new Date(document.last_indexed_at).toLocaleDateString("vi-VN")}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">{document.description ?? "—"}</td>
+                <td className="px-4 py-3 text-text-muted">{document.description ?? "—"}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleReplace(document)}
-                      className="rounded-lg border px-3 py-1 hover:bg-zinc-50"
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={() => handleReplace(document)}>
                       Thay file
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(document.id)}
-                      className="rounded-lg border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
-                    >
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(document.id)}>
                       Xóa
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
             ))}
             {documents.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-text-muted">
                   Chưa có tài liệu nào.
                 </td>
               </tr>
@@ -317,6 +359,6 @@ export default function TeacherDocumentsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

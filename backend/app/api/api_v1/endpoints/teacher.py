@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+import logging
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -11,9 +12,11 @@ from app.models.user import User
 from app.schemas.document import DocumentResponse, MaterialTypeOption
 from app.services.analytics_service import analytics_service
 from app.services.document_service import DocumentService
+from app.services.rag_service import describe_rag_error
 
 teacher_router = APIRouter()
 document_service = DocumentService()
+logger = logging.getLogger(__name__)
 
 
 def _metadata_from_form(
@@ -105,9 +108,11 @@ async def create_document(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        logger.exception("Upload tài liệu thất bại (RAG/Qdrant/embedding).")
+        detail = describe_rag_error(exc)
         raise HTTPException(
             status_code=503,
-            detail="Không kết nối được Qdrant hoặc lỗi khi lưu tài liệu.",
+            detail=f"Không kết nối được Qdrant hoặc lỗi khi lưu tài liệu. {detail}",
         ) from exc
 
     return document

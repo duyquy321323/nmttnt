@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { UserPlus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { Student } from "@/types";
@@ -69,44 +76,44 @@ export default function AdminStudentsPage() {
   }
 
   if (loading || !user) {
-    return <div className="p-8 text-zinc-500">Đang tải...</div>;
+    return <LoadingState />;
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-zinc-900">Quản lý học sinh</h1>
+    <PageContainer>
+      <PageHeader
+        title="Quản lý học sinh"
+        description="Thêm và quản lý tài khoản học sinh trong hệ thống."
+      />
 
-      <form
-        onSubmit={handleCreate}
-        className="mt-6 grid gap-4 rounded-2xl border border-zinc-200 bg-white p-6 md:grid-cols-3"
-      >
-        <input
+      <form onSubmit={handleCreate} className="card grid gap-4 p-5 md:grid-cols-3">
+        <Input
           placeholder="Tên đăng nhập"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
-          className="rounded-xl border border-zinc-300 px-4 py-3 text-sm"
           required
         />
-        <input
+        <Input
           placeholder="Họ tên (tuỳ chọn)"
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
-          className="rounded-xl border border-zinc-300 px-4 py-3 text-sm"
         />
-        <button
-          type="submit"
-          className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button type="submit">
+          <UserPlus size={16} />
           Thêm học sinh
-        </button>
+        </Button>
       </form>
 
-      {message && <p className="mt-4 text-sm text-green-600">{message}</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {message && <StatusMessage className="mt-4">{message}</StatusMessage>}
+      {error && (
+        <StatusMessage variant="error" className="mt-4">
+          {error}
+        </StatusMessage>
+      )}
 
-      <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+      <div className="table-wrap mt-8 overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50 text-left text-zinc-600">
+          <thead className="table-head">
             <tr>
               <th className="px-4 py-3">Username</th>
               <th className="px-4 py-3">Họ tên</th>
@@ -116,33 +123,42 @@ export default function AdminStudentsPage() {
           </thead>
           <tbody>
             {students.map((student) => (
-              <tr key={student.id} className="border-t border-zinc-100">
-                <td className="px-4 py-3">{student.username}</td>
-                <td className="px-4 py-3">{student.full_name ?? "—"}</td>
-                <td className="px-4 py-3">{student.is_active ? "Hoạt động" : "Vô hiệu"}</td>
+              <tr key={student.id} className="table-row">
+                <td className="px-4 py-3 text-text">{student.username}</td>
+                <td className="px-4 py-3 text-text-muted">{student.full_name ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      student.is_active
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "bg-surface-inset text-text-muted border border-border"
+                    }`}
+                  >
+                    {student.is_active ? "Hoạt động" : "Vô hiệu"}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleResetPassword(student.id)}
-                      className="rounded-lg border px-3 py-1 hover:bg-zinc-50"
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={() => handleResetPassword(student.id)}>
                       Reset MK
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(student.id)}
-                      className="rounded-lg border border-red-200 px-3 py-1 text-red-600 hover:bg-red-50"
-                    >
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(student.id)}>
                       Xóa
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
             ))}
+            {students.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-text-muted">
+                  Chưa có học sinh nào.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

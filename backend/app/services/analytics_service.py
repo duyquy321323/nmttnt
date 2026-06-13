@@ -1,6 +1,7 @@
 """Ghi log và báo cáo robustness."""
 
 import json
+import logging
 from collections import defaultdict
 
 from sqlalchemy import func
@@ -10,6 +11,8 @@ from app.core.fallback_types import FallbackReason
 from app.models.answer_feedback import AnswerFeedback
 from app.models.chat_interaction_log import ChatInteractionLog
 from app.services.prompt_version import get_prompt_version
+
+logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
@@ -29,7 +32,7 @@ class AnalyticsService:
         metadata_filter: dict | None = None,
         rag_score: float | None = None,
         document_versions: dict | None = None,
-    ) -> ChatInteractionLog:
+    ) -> ChatInteractionLog | None:
         meta = metadata_filter or {}
         log = ChatInteractionLog(
             user_id=user_id,
@@ -48,10 +51,15 @@ class AnalyticsService:
             document_versions=json.dumps(document_versions or {}, ensure_ascii=False),
             rag_score=str(rag_score) if rag_score is not None else None,
         )
-        db.add(log)
-        db.commit()
-        db.refresh(log)
-        return log
+        try:
+            db.add(log)
+            db.commit()
+            db.refresh(log)
+            return log
+        except Exception:
+            logger.exception("Không ghi được chat_interaction_logs — chat vẫn trả lời bình thường.")
+            db.rollback()
+            return None
 
     def add_feedback(
         self,

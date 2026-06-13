@@ -127,7 +127,7 @@ async def process_chat(
                 session_id=session_id,
                 metadata_filter=metadata_filter,
             )
-            interaction_id = log.id
+            interaction_id = log.id if log else None
         return {
             "answer": answer,
             "from_rag": False,
@@ -158,7 +158,7 @@ async def process_chat(
                 session_id=session_id,
                 metadata_filter=metadata_filter,
             )
-            interaction_id = log.id
+            interaction_id = log.id if log else None
         return {
             "answer": clarification_msg,
             "from_rag": False,
@@ -206,7 +206,7 @@ async def process_chat(
                 metadata_filter=metadata_filter,
                 rag_score=top_score,
             )
-            interaction_id = log.id
+            interaction_id = log.id if log else None
         return {
             **_base_response(rag_result),
             "answer": answer,
@@ -280,7 +280,7 @@ async def process_chat(
                 metadata_filter=metadata_filter,
                 rag_score=top_score,
             )
-            interaction_id = log.id
+            interaction_id = log.id if log else None
         return {
             **_base_response(rag_result, fallback_reason=FallbackReason.API_ERROR.value),
             "answer": answer,
@@ -304,7 +304,7 @@ async def process_chat(
             metadata_filter=metadata_filter,
             rag_score=top_score,
         )
-        interaction_id = log.id
+        interaction_id = log.id if log else None
 
     return {
         **_base_response(rag_result),

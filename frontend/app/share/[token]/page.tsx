@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { Eye } from "lucide-react";
 
-import { MarkdownMessage } from "@/components/MarkdownMessage";
+import { ChatMessage } from "@/components/chat/ChatMessage";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { api, ApiError } from "@/lib/api";
 import type { ChatSessionDetail } from "@/types";
 
@@ -23,44 +27,41 @@ export default function ShareSessionPage() {
   }, [params.token]);
 
   if (error) {
-    return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-red-600">{error}</div>;
+    return (
+      <PageContainer maxWidth="lg" className="flex items-center justify-center">
+        <StatusMessage variant="error">{error}</StatusMessage>
+      </PageContainer>
+    );
   }
 
   if (!session) {
-    return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-zinc-500">Đang tải...</div>;
+    return <LoadingState />;
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h1 className="text-xl font-bold text-zinc-900">{session.title}</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Session được chia sẻ (chỉ xem, không chat).
-        </p>
+    <PageContainer maxWidth="lg">
+      <div className="card mb-4 flex items-start gap-3 p-4">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+          <Eye size={18} />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold text-text">{session.title}</h1>
+          <p className="mt-0.5 text-xs text-text-muted">Session được chia sẻ (chỉ xem, không chat).</p>
+        </div>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="card space-y-4 p-5">
         {session.messages.map((message) => (
-          <div
+          <ChatMessage
             key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 text-zinc-800"
-              }`}
-            >
-              {message.role === "assistant" ? (
-                <MarkdownMessage content={message.content} />
-              ) : (
-                message.content
-              )}
-            </div>
-          </div>
+            role={message.role}
+            content={message.content}
+          />
         ))}
+        {session.messages.length === 0 && (
+          <p className="py-8 text-center text-sm text-text-muted">Session chưa có tin nhắn.</p>
+        )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

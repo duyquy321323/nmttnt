@@ -1,0 +1,2 @@
+# Optional: local development server (py run.py). Not needed on Passenger.
+uvicorn[standard]>=0.32.0

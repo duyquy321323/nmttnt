@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { KeyRound } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 
@@ -43,62 +50,78 @@ export default function ChangePasswordPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-zinc-500">Đang tải...</div>;
+    return <LoadingState />;
   }
 
   if (!user || user.role !== "teacher") {
-    return <div className="p-8 text-zinc-500">Chỉ giáo viên mới truy cập trang này.</div>;
+    return (
+      <PageContainer maxWidth="md">
+        <p className="text-sm text-text-muted">Chỉ giáo viên mới truy cập trang này.</p>
+      </PageContainer>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-8">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-zinc-900">Đổi mật khẩu</h1>
+    <PageContainer maxWidth="md" className="flex items-center justify-center">
+      <div className="card w-full p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
+            <KeyRound size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-text">Đổi mật khẩu</h1>
+            <p className="text-xs text-text-muted">Giáo viên</p>
+          </div>
+        </div>
+
         {user.must_change_password && (
-          <p className="mt-2 text-sm text-amber-600">
+          <div className="alert-info mb-6">
             Bạn cần đổi mật khẩu trước khi sử dụng các chức năng quản lý tài liệu.
-          </p>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <input
-            type="password"
-            placeholder="Mật khẩu hiện tại"
-            value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Mật khẩu mới"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm"
-            minLength={6}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Xác nhận mật khẩu mới"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm"
-            minLength={6}
-            required
-          />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Mật khẩu hiện tại" htmlFor="current-password">
+            <Input
+              id="current-password"
+              type="password"
+              placeholder="Mật khẩu hiện tại"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Mật khẩu mới" htmlFor="new-password">
+            <Input
+              id="new-password"
+              type="password"
+              placeholder="Mật khẩu mới"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              minLength={6}
+              required
+            />
+          </FormField>
+          <FormField label="Xác nhận mật khẩu mới" htmlFor="confirm-password">
+            <Input
+              id="confirm-password"
+              type="password"
+              placeholder="Xác nhận mật khẩu mới"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              minLength={6}
+              required
+            />
+          </FormField>
 
-          {message && <p className="text-sm text-green-600">{message}</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {message && <StatusMessage>{message}</StatusMessage>}
+          {error && <StatusMessage variant="error">{error}</StatusMessage>}
 
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
-          >
+          <Button type="submit" className="w-full py-3">
             Lưu mật khẩu mới
-          </button>
+          </Button>
         </form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

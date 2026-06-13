@@ -125,3 +125,44 @@ export interface Student {
   created_at: string;
   updated_at: string;
 }
+
+export interface UserCountStats {
+  total: number;
+  active: number;
+  inactive: number;
+  pending_password: number;
+}
+
+export interface AdminDashboard {
+  teachers: UserCountStats;
+  students: UserCountStats;
+  documents_total: number;
+  chat_sessions_total: number;
+  chat_messages_total: number;
+  shared_sessions_total: number;
+  total_interactions: number;
+  failed_interactions: number;
+  reask_count: number;
+  clarification_count: number;
+  feedback_count: number;
+  positive_feedback_rate: number | null;
+  rag: {
+    has_documents: boolean;
+    document_count: number;
+    total_points: number;
+    collection_name: string;
+  };
+  by_fallback_reason: Record<string, number>;
+  by_subject: Record<string, number>;
+  documents_by_subject: Record<string, number>;
+  interactions_by_day: Array<{ date: string; count: number }>;
+  recent_users: Array<{
+    id: number;
+    username: string;
+    full_name: string | null;
+    role: string;
+    is_active: boolean;
+    created_at: string;
+  }>;
+  prompt_version: string;
+}

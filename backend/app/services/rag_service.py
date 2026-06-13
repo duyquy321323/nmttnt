@@ -4,13 +4,16 @@ import hashlib
 import re
 import uuid
 from functools import lru_cache
+from urllib.parse import urlparse
 
 from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
     MatchValue,
+    PayloadSchemaType,
     PointStruct,
     VectorParams,
 )
@@ -38,24 +41,90 @@ from app.services.rag_retrieval import (
 )
 
 
+def describe_rag_error(exc: BaseException) -> str:
+    """Chuyển lỗi Qdrant thành message dễ đọc (HTTP status + body)."""
+    if isinstance(exc, UnexpectedResponse):
+        body = ""
+        if exc.content:
+            body = exc.content.decode("utf-8", errors="replace")[:400]
+        hint = ""
+        if exc.status_code == 403:
+            hint = " API key cần quyền write/manage, không phải read-only."
+        elif exc.status_code == 400 and "dimension" in body.lower():
+            hint = " Collection vector size không khớp model embedding — xóa collection edu_documents trên Qdrant Cloud rồi restart app."
+        return f"Qdrant HTTP {exc.status_code} {exc.reason_phrase}: {body}{hint}".strip()
+    return str(exc)
+
+
+def _create_qdrant_client() -> QdrantClient:
+    """Qdrant Cloud trên shared hosting: HTTPS port 443."""
+    raw_url = settings.QDRANT_URL.strip().rstrip("/")
+    parsed = urlparse(raw_url)
+    host = parsed.hostname
+    if not host:
+        raise ValueError(f"Invalid QDRANT_URL: {settings.QDRANT_URL}")
+
+    is_qdrant_cloud = host.endswith(".cloud.qdrant.io")
+    common = {
+        "api_key": settings.QDRANT_API_KEY,
+        "timeout": settings.QDRANT_TIMEOUT,
+        "prefer_grpc": False,
+        "check_compatibility": False,
+    }
+
+    if is_qdrant_cloud:
+        cloud_url = f"{parsed.scheme}://{host}"
+        return QdrantClient(url=cloud_url, port=443, https=True, **common)
+
+    https = parsed.scheme == "https"
+    port = parsed.port if parsed.port is not None else (443 if https else 6333)
+    return QdrantClient(host=host, port=port, https=https, **common)
+
+
 class RagService:
     def __init__(self) -> None:
-        self._client = QdrantClient(url=settings.QDRANT_URL)
+        self._client = _create_qdrant_client()
         self._collection = settings.QDRANT_COLLECTION_NAME
         self._parser = DocumentParser()
         self._embedding = get_embedding_service()
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:
+        expected_size = self._embedding.vector_size
         if self._client.collection_exists(self._collection):
+            info = self._client.get_collection(self._collection)
+            vectors = info.config.params.vectors
+            actual_size = getattr(vectors, "size", None)
+            if actual_size is not None and actual_size != expected_size:
+                raise ValueError(
+                    f"Collection '{self._collection}' dùng vector size {actual_size}, "
+                    f"model hiện tại cần {expected_size}. "
+                    "Xóa collection trên Qdrant Cloud rồi restart backend."
+                )
+            self._ensure_payload_indexes()
             return
+
         self._client.create_collection(
             collection_name=self._collection,
             vectors_config=VectorParams(
-                size=self._embedding.vector_size,
+                size=expected_size,
                 distance=Distance.COSINE,
             ),
         )
+        self._ensure_payload_indexes()
+
+    def _ensure_payload_indexes(self) -> None:
+        for field in ("document_id", "filename"):
+            try:
+                self._client.create_payload_index(
+                    collection_name=self._collection,
+                    field_name=field,
+                    field_schema=PayloadSchemaType.KEYWORD,
+                )
+            except UnexpectedResponse:
+                pass
+            except Exception:
+                pass
 
     @staticmethod
     def _chunk_text(text: str) -> list[str]:
@@ -167,22 +236,37 @@ class RagService:
         self._delete_document(document_id)
 
         doc_metadata = metadata_to_payload(normalize_metadata(metadata))
-        vectors = self._embedding.embed_texts(chunks)
-        points = [
-            PointStruct(
-                id=str(uuid.uuid4()),
-                vector=vector,
-                payload={
-                    "document_id": document_id,
-                    "filename": filename,
-                    "chunk_index": index,
-                    "text": chunk,
-                    **doc_metadata,
-                },
-            )
-            for index, (chunk, vector) in enumerate(zip(chunks, vectors))
-        ]
-        self._client.upsert(collection_name=self._collection, points=points)
+        batch_size = max(1, settings.RAG_INGEST_BATCH_SIZE)
+        points: list[PointStruct] = []
+        for start in range(0, len(chunks), batch_size):
+            batch_chunks = chunks[start : start + batch_size]
+            vectors = self._embedding.embed_texts(batch_chunks)
+            for index, (chunk, vector) in enumerate(
+                zip(batch_chunks, vectors),
+                start=start,
+            ):
+                points.append(
+                    PointStruct(
+                        id=str(uuid.uuid4()),
+                        vector=vector,
+                        payload={
+                            "document_id": document_id,
+                            "filename": filename,
+                            "chunk_index": index,
+                            "text": chunk,
+                            **doc_metadata,
+                        },
+                    )
+                )
+
+        for start in range(0, len(points), batch_size):
+            try:
+                self._client.upsert(
+                    collection_name=self._collection,
+                    points=points[start : start + batch_size],
+                )
+            except UnexpectedResponse as exc:
+                raise ValueError(describe_rag_error(exc)) from exc
 
         return {
             "document_id": document_id,
@@ -213,17 +297,22 @@ class RagService:
         self._delete_document(document_id)
 
     def _delete_document(self, document_id: str) -> None:
-        self._client.delete(
-            collection_name=self._collection,
-            points_selector=Filter(
-                must=[
-                    FieldCondition(
-                        key="document_id",
-                        match=MatchValue(value=document_id),
-                    )
-                ]
-            ),
-        )
+        try:
+            self._client.delete(
+                collection_name=self._collection,
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(
+                            key="document_id",
+                            match=MatchValue(value=document_id),
+                        )
+                    ]
+                ),
+            )
+        except UnexpectedResponse as exc:
+            if exc.status_code in (400, 404):
+                return
+            raise ValueError(describe_rag_error(exc)) from exc
 
     def _find_math_chunks_by_keyword(
         self,

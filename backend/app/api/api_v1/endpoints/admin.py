@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.chat_session import ChatSession
 from app.models.document import Document
 from app.models.user import User, UserRole
+from app.schemas.admin_dashboard import AdminDashboardResponse
 from app.schemas.user import (
     StudentCreateRequest,
     StudentUpdateRequest,
@@ -15,6 +16,7 @@ from app.schemas.user import (
     TeacherUpdateRequest,
     UserResponse,
 )
+from app.services.admin_dashboard_service import admin_dashboard_service
 from app.services.document_service import DocumentService
 
 admin_router = APIRouter()
@@ -22,6 +24,14 @@ admin_router = APIRouter()
 
 def get_document_service() -> DocumentService:
     return DocumentService()
+
+
+@admin_router.get("/dashboard", response_model=AdminDashboardResponse)
+def get_dashboard(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    return admin_dashboard_service.get_dashboard(db)
 
 
 @admin_router.get("/teachers", response_model=list[UserResponse])

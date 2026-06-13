@@ -2,7 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { LogIn } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 
@@ -15,12 +21,16 @@ export default function LoginPage() {
 
   if (!loading && user) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center text-zinc-600">
-        Bạn đã đăng nhập.{" "}
-        <Link href="/" className="text-blue-600 hover:underline">
-          Về trang chủ
-        </Link>
-      </div>
+      <PageContainer maxWidth="md" className="flex items-center justify-center">
+        <div className="card w-full p-8 text-center">
+          <p className="text-sm text-text-muted">
+            Bạn đã đăng nhập.{" "}
+            <Link href="/" className="text-brand underline underline-offset-2 hover:text-brand-hover">
+              Về trang chủ
+            </Link>
+          </p>
+        </div>
+      </PageContainer>
     );
   }
 
@@ -38,52 +48,49 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-zinc-900">Đăng nhập</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Dành cho admin, giáo viên và học sinh. Khách (guest) có thể dùng chatbot mà không cần đăng nhập.
+    <PageContainer maxWidth="md" className="flex items-center justify-center">
+      <div className="card w-full p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
+            <LogIn size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-text">Đăng nhập</h1>
+            <p className="text-xs text-text-muted">Admin · Giáo viên · Học sinh</p>
+          </div>
+        </div>
+
+        <p className="mb-6 text-sm text-text-muted">
+          Khách (guest) có thể dùng chatbot mà không cần đăng nhập.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="username" className="mb-1 block text-sm font-medium text-zinc-700">
-              Tên đăng nhập
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Tên đăng nhập" htmlFor="username">
+            <Input
               id="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
               required
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-zinc-700">
-              Mật khẩu
-            </label>
-            <input
+          <FormField label="Mật khẩu" htmlFor="password">
+            <Input
               id="password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
               required
             />
-          </div>
+          </FormField>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <StatusMessage variant="error">{error}</StatusMessage>}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
+          <Button type="submit" disabled={submitting} className="w-full py-3">
             {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
-          </button>
+          </Button>
         </form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

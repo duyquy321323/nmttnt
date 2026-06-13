@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.core.deps import require_student
@@ -42,7 +43,17 @@ def create_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_student),
 ):
-    session = session_service.create_session(db, current_user, request.title)
+    try:
+        session = session_service.create_session(db, current_user, request.title)
+    except OperationalError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Không ghi được session vào cơ sở dữ liệu. "
+                "Kiểm tra MySQL (innodb_force_recovery phải tắt) rồi khởi động lại."
+            ),
+        ) from None
     return _to_session_response(session)
 
 

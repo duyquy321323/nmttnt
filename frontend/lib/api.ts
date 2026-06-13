@@ -1,7 +1,14 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 const TOKEN_KEY = "auth_token";
 const REQUEST_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 180_000;
 const MAX_RETRIES = 2;
+
+type RequestOptions = RequestInit & { timeoutMs?: number };
+
+function isMutationMethod(method: string): boolean {
+  return !["GET", "HEAD"].includes(method.toUpperCase());
+}
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -38,27 +45,34 @@ function delay(ms: number): Promise<void> {
 
 async function request<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestOptions = {},
   auth = false,
   retry = 0,
 ): Promise<T> {
-  const headers = new Headers(options.headers);
+  const { timeoutMs: timeoutOverride, ...fetchOptions } = options;
+  const method = (fetchOptions.method ?? "GET").toUpperCase();
+  const allowRetry = !isMutationMethod(method);
+  const timeoutMs =
+    timeoutOverride ??
+    (fetchOptions.body instanceof FormData ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
+
+  const headers = new Headers(fetchOptions.headers);
 
   if (auth) {
     const token = getToken();
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
 
-  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+  if (!(fetchOptions.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_URL}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers,
       signal: controller.signal,
     });
@@ -78,7 +92,7 @@ async function request<T>(
         message = detail.map((item) => item.msg).join(", ");
       }
 
-      if (response.status >= 500 && retry < MAX_RETRIES) {
+      if (allowRetry && response.status >= 500 && retry < MAX_RETRIES) {
         await delay(800 * (retry + 1));
         return request<T>(path, options, auth, retry + 1);
       }
@@ -98,7 +112,7 @@ async function request<T>(
       isAbort ||
       (typeof navigator !== "undefined" && !navigator.onLine);
 
-    if (isNetwork && retry < MAX_RETRIES) {
+    if (allowRetry && isNetwork && retry < MAX_RETRIES) {
       await delay(800 * (retry + 1));
       return request<T>(path, options, auth, retry + 1);
     }
