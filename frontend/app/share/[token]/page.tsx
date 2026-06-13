@@ -40,7 +40,7 @@ export default function ShareSessionPage() {
 
   return (
     <PageContainer maxWidth="lg">
-      <div className="card mb-4 flex items-start gap-3 p-4">
+      <div className="card mb-4 flex items-start gap-3 p-4 sm:p-5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
           <Eye size={18} />
         </div>
@@ -50,7 +50,7 @@ export default function ShareSessionPage() {
         </div>
       </div>
 
-      <div className="card space-y-4 p-5">
+      <div className="card space-y-4 p-4 sm:p-5">
         {session.messages.map((message) => (
           <ChatMessage
             key={message.id}

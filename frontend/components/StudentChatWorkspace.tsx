@@ -28,7 +28,7 @@ export function StudentChatWorkspace() {
   const [chatLoading, setChatLoading] = useState(false);
   const [error, setError] = useState("");
   const [shareInfo, setShareInfo] = useState<ShareLinkInfo | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [clarificationMessageIds, setClarificationMessageIds] = useState<Set<number>>(new Set());
   const [interactionByMessageId, setInteractionByMessageId] = useState<Record<number, number>>({});
@@ -134,8 +134,10 @@ export function StudentChatWorkspace() {
       );
       await loadSessions(search);
       await loadSession(created.id);
-      setSidebarOpen(true);
-      localStorage.setItem("student_sidebar_open", "true");
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+        localStorage.setItem("student_sidebar_open", "true");
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Không tạo được session.");
     } finally {
@@ -356,7 +358,7 @@ export function StudentChatWorkspace() {
       />
 
       <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface">
-        <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-5 py-2.5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface-raised px-4 py-2.5 sm:gap-3 sm:px-5">
           <button
             type="button"
             onClick={toggleSidebar}
@@ -371,7 +373,7 @@ export function StudentChatWorkspace() {
               <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-text">
                 {activeSession.title}
               </h2>
-              <div className="flex shrink-0 gap-2">
+              <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
                 {shareInfo?.is_shared ? (
                   <>
                     <Button
@@ -407,7 +409,7 @@ export function StudentChatWorkspace() {
                 Mạng yếu — em có thể thử gửi lại nếu tin nhắn không đi.
               </p>
             )}
-            <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-6 py-5 scrollbar-thin">
+            <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-4 py-4 scrollbar-thin sm:px-6 sm:py-5">
               {activeSession.messages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -432,7 +434,7 @@ export function StudentChatWorkspace() {
             </div>
 
             {error && (
-              <div className="flex shrink-0 items-center gap-3 border-t border-border-soft px-6 py-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-soft px-4 py-2 sm:gap-3 sm:px-6">
                 <p className="text-sm text-red-600">{error}</p>
                 {lastFailedMessage && (
                   <Button type="button" variant="outline" size="sm" onClick={handleRetrySend}>
@@ -442,7 +444,7 @@ export function StudentChatWorkspace() {
               </div>
             )}
 
-            <div className="shrink-0 border-t border-border bg-surface-raised px-6 py-3">
+            <div className="shrink-0 border-t border-border bg-surface-raised px-4 py-3 sm:px-6">
               <ChatInputBar
                 value={input}
                 onChange={setInput}
@@ -461,7 +463,7 @@ export function StudentChatWorkspace() {
             </div>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-text-muted">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-text-muted sm:px-6">
             {error && (
               <p className="w-full max-w-md rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-600">
                 {error}

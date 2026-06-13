@@ -17,6 +17,12 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import {
+  DataTableViewport,
+  MobileDataCard,
+  MobileDataList,
+  MobileDataRow,
+} from "@/components/ui/responsive-data";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { DocumentItem, MaterialTypeOption } from "@/types";
@@ -162,7 +168,7 @@ export default function TeacherDocumentsPage() {
         description="Gắn metadata theo loại học liệu để RAG lọc đúng phạm vi (lớp, môn, bài, mức độ...)."
       />
 
-      <form onSubmit={handleUpload} className="card space-y-5 p-6" aria-busy={uploading}>
+      <form onSubmit={handleUpload} className="card space-y-5 p-4 sm:p-6" aria-busy={uploading}>
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Tiêu đề tài liệu" htmlFor="doc-title">
             <Input
@@ -310,7 +316,7 @@ export default function TeacherDocumentsPage() {
         </StatusMessage>
       )}
 
-      <div className="table-wrap mt-8 overflow-x-auto">
+      <DataTableViewport className="mt-8">
         <table className="min-w-full text-sm">
           <thead className="table-head">
             <tr>
@@ -358,7 +364,43 @@ export default function TeacherDocumentsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableViewport>
+
+      <MobileDataList className="mt-8">
+        {documents.map((document) => (
+          <MobileDataCard key={document.id}>
+            <MobileDataRow label="Tiêu đề">
+              <span className="font-medium">{document.title}</span>
+            </MobileDataRow>
+            <MobileDataRow label="File">{document.original_filename}</MobileDataRow>
+            <MobileDataRow label="Metadata">
+              <span className="text-xs text-text-muted">{metadataSummary(document)}</span>
+            </MobileDataRow>
+            <MobileDataRow label="Phiên bản">
+              v{document.version}
+              {document.last_indexed_at && (
+                <span className="block text-xs text-text-faint">
+                  {new Date(document.last_indexed_at).toLocaleDateString("vi-VN")}
+                </span>
+              )}
+            </MobileDataRow>
+            {document.description && (
+              <MobileDataRow label="Mô tả">{document.description}</MobileDataRow>
+            )}
+            <div className="flex flex-wrap gap-2 border-t border-border-soft pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => handleReplace(document)}>
+                Thay file
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(document.id)}>
+                Xóa
+              </Button>
+            </div>
+          </MobileDataCard>
+        ))}
+        {documents.length === 0 && (
+          <p className="py-8 text-center text-sm text-text-muted">Chưa có tài liệu nào.</p>
+        )}
+      </MobileDataList>
     </PageContainer>
   );
 }

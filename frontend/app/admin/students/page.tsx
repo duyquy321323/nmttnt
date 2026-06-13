@@ -9,6 +9,12 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import {
+  DataTableViewport,
+  MobileDataCard,
+  MobileDataList,
+  MobileDataRow,
+} from "@/components/ui/responsive-data";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import type { Student } from "@/types";
@@ -86,7 +92,7 @@ export default function AdminStudentsPage() {
         description="Thêm và quản lý tài khoản học sinh trong hệ thống."
       />
 
-      <form onSubmit={handleCreate} className="card grid gap-4 p-5 md:grid-cols-3">
+      <form onSubmit={handleCreate} className="card grid gap-4 p-4 sm:p-5 sm:grid-cols-2 lg:grid-cols-3">
         <Input
           placeholder="Tên đăng nhập"
           value={username}
@@ -98,7 +104,7 @@ export default function AdminStudentsPage() {
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
         />
-        <Button type="submit">
+        <Button type="submit" className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto">
           <UserPlus size={16} />
           Thêm học sinh
         </Button>
@@ -111,7 +117,7 @@ export default function AdminStudentsPage() {
         </StatusMessage>
       )}
 
-      <div className="table-wrap mt-8 overflow-x-auto">
+      <DataTableViewport className="mt-8">
         <table className="min-w-full text-sm">
           <thead className="table-head">
             <tr>
@@ -138,7 +144,7 @@ export default function AdminStudentsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => handleResetPassword(student.id)}>
                       Reset MK
                     </Button>
@@ -158,7 +164,38 @@ export default function AdminStudentsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableViewport>
+
+      <MobileDataList className="mt-8">
+        {students.map((student) => (
+          <MobileDataCard key={student.id}>
+            <MobileDataRow label="Username">{student.username}</MobileDataRow>
+            <MobileDataRow label="Họ tên">{student.full_name ?? "—"}</MobileDataRow>
+            <MobileDataRow label="Trạng thái">
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  student.is_active
+                    ? "border border-green-200 bg-green-50 text-green-700"
+                    : "border border-border bg-surface-inset text-text-muted"
+                }`}
+              >
+                {student.is_active ? "Hoạt động" : "Vô hiệu"}
+              </span>
+            </MobileDataRow>
+            <div className="flex flex-wrap gap-2 border-t border-border-soft pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => handleResetPassword(student.id)}>
+                Reset MK
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(student.id)}>
+                Xóa
+              </Button>
+            </div>
+          </MobileDataCard>
+        ))}
+        {students.length === 0 && (
+          <p className="py-8 text-center text-sm text-text-muted">Chưa có học sinh nào.</p>
+        )}
+      </MobileDataList>
     </PageContainer>
   );
 }

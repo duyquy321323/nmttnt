@@ -81,9 +81,9 @@ export function Sidebar({ extraContent, mobileOpen = true, onMobileClose }: Side
 
       <aside
         className={cn(
-          "flex h-full w-52 shrink-0 flex-col border-r border-sidebar-border bg-sidebar",
+          "flex h-full w-[min(18rem,85vw)] shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:w-52",
           isMobileDrawer &&
-            "fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out md:relative md:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 shadow-xl transition-transform duration-300 ease-out md:relative md:translate-x-0 md:shadow-none",
           isMobileDrawer && !mobileOpen && "-translate-x-full md:translate-x-0",
         )}
       >

@@ -21,6 +21,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import {
+  DataTableViewport,
+  MobileDataCard,
+  MobileDataList,
+  MobileDataRow,
+} from "@/components/ui/responsive-data";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -67,7 +73,7 @@ function StatCard({ title, value, hint, icon: Icon, iconClassName }: StatCardPro
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
+        <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{value}</p>
         {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
       </CardContent>
     </Card>
@@ -79,7 +85,8 @@ function BarChart({ data }: { data: AdminDashboard["interactions_by_day"] }) {
   const barAreaHeight = 140;
 
   return (
-    <div className="grid h-56 grid-cols-7 gap-1 sm:gap-2">
+    <div className="overflow-x-auto pb-1">
+      <div className="grid h-56 min-w-[280px] grid-cols-7 gap-1 sm:gap-2">
       {data.map((item) => {
         const barHeight =
           item.count > 0 ? Math.max(Math.round((item.count / max) * barAreaHeight), 10) : 0;
@@ -108,6 +115,7 @@ function BarChart({ data }: { data: AdminDashboard["interactions_by_day"] }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -197,7 +205,7 @@ export default function AdminDashboardPage() {
             <LayoutDashboard size={16} />
             <span>Quản trị hệ thống</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Tổng quan chatbot RAG — người dùng, tài liệu, phiên chat và chất lượng phản hồi.
           </p>
@@ -350,8 +358,9 @@ export default function AdminDashboardPage() {
           <CardTitle>Người dùng mới nhất</CardTitle>
           <CardDescription>Giáo viên và học sinh vừa được tạo</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0 pb-2">
-          <table className="min-w-full text-sm">
+        <CardContent className="p-0 pb-2">
+          <DataTableViewport>
+            <table className="min-w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-6 py-3">Username</th>
@@ -388,6 +397,32 @@ export default function AdminDashboardPage() {
               )}
             </tbody>
           </table>
+          </DataTableViewport>
+
+          <MobileDataList className="px-4 pb-2">
+            {dashboard.recent_users.map((item) => (
+              <MobileDataCard key={item.id}>
+                <MobileDataRow label="Username">
+                  <span className="font-medium">{item.username}</span>
+                </MobileDataRow>
+                <MobileDataRow label="Họ tên">{item.full_name ?? "—"}</MobileDataRow>
+                <MobileDataRow label="Vai trò">
+                  <Badge variant="secondary">
+                    {item.role === "teacher" ? "Giáo viên" : "Học sinh"}
+                  </Badge>
+                </MobileDataRow>
+                <MobileDataRow label="Trạng thái">
+                  <Badge variant={item.is_active ? "success" : "outline"}>
+                    {item.is_active ? "Hoạt động" : "Vô hiệu"}
+                  </Badge>
+                </MobileDataRow>
+                <MobileDataRow label="Ngày tạo">{formatDateTime(item.created_at)}</MobileDataRow>
+              </MobileDataCard>
+            ))}
+            {dashboard.recent_users.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted-foreground">Chưa có người dùng nào.</p>
+            )}
+          </MobileDataList>
         </CardContent>
       </Card>
 

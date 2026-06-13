@@ -138,19 +138,19 @@
   }
 
   .bubble-user {
-    @apply max-w-[72%] rounded-2xl rounded-tr-sm px-4 py-3
+    @apply max-w-[min(92%,20rem)] sm:max-w-[80%] md:max-w-[72%] rounded-2xl rounded-tr-sm px-3 py-2.5 sm:px-4 sm:py-3
            text-sm leading-relaxed whitespace-pre-wrap
            bg-brand text-white;
   }
 
   .bubble-bot {
-    @apply max-w-[72%] rounded-2xl rounded-tl-sm px-4 py-3
+    @apply max-w-[min(92%,20rem)] sm:max-w-[80%] md:max-w-[72%] rounded-2xl rounded-tl-sm px-3 py-2.5 sm:px-4 sm:py-3
            text-sm leading-relaxed whitespace-pre-wrap
            bg-surface-inset text-text;
   }
 
   .bubble-clarification {
-    @apply max-w-[72%] rounded-2xl rounded-tl-sm px-4 py-3
+    @apply max-w-[min(92%,20rem)] sm:max-w-[80%] md:max-w-[72%] rounded-2xl rounded-tl-sm px-3 py-2.5 sm:px-4 sm:py-3
            text-sm leading-relaxed whitespace-pre-wrap
            border border-amber-200 bg-amber-50 text-amber-950;
   }
@@ -164,7 +164,7 @@
   }
 
   .alert-warning {
-    @apply border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-sm text-amber-800;
+    @apply border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 sm:px-5;
   }
 
   .alert-info {
@@ -172,7 +172,7 @@
   }
 
   .table-wrap {
-    @apply bg-surface rounded-xl border border-border shadow-sm overflow-hidden;
+    @apply bg-surface rounded-xl border border-border shadow-sm overflow-x-auto;
   }
 
   .table-head {

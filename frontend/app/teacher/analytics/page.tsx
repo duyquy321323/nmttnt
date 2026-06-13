@@ -7,6 +7,12 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusMessage } from "@/components/ui/StatusMessage";
+import {
+  DataTableViewport,
+  MobileDataCard,
+  MobileDataList,
+  MobileDataRow,
+} from "@/components/ui/responsive-data";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
 
@@ -154,7 +160,7 @@ export default function TeacherAnalyticsPage() {
         </div>
       </div>
 
-      <div className="table-wrap mt-8 overflow-x-auto">
+      <DataTableViewport className="mt-8">
         <table className="min-w-full text-sm">
           <thead className="table-head">
             <tr>
@@ -188,7 +194,29 @@ export default function TeacherAnalyticsPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableViewport>
+
+      <MobileDataList className="mt-8">
+        {report.recent_failures.map((row) => (
+          <MobileDataCard key={row.id}>
+            <MobileDataRow label="Câu hỏi">
+              <span className="break-words">{row.question}</span>
+            </MobileDataRow>
+            <MobileDataRow label="Lý do">
+              {REASON_LABELS[row.fallback_reason ?? ""] ?? row.fallback_reason ?? "—"}
+            </MobileDataRow>
+            <MobileDataRow label="Môn / Bài">
+              {[row.subject, row.lesson ? `bài ${row.lesson}` : null]
+                .filter(Boolean)
+                .join(" · ") || "—"}
+            </MobileDataRow>
+            <MobileDataRow label="Re-ask">{row.is_reask ? "Có" : "—"}</MobileDataRow>
+          </MobileDataCard>
+        ))}
+        {report.recent_failures.length === 0 && (
+          <p className="py-8 text-center text-sm text-text-muted">Chưa có log thất bại.</p>
+        )}
+      </MobileDataList>
 
       {error && (
         <StatusMessage variant="error" className="mt-4">

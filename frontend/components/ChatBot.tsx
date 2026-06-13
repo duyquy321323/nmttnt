@@ -151,7 +151,7 @@ export function ChatBot() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-surface">
-      <div className="shrink-0 border-b border-border bg-surface-raised px-5 py-2.5">
+      <div className="shrink-0 border-b border-border bg-surface-raised px-4 py-2.5 sm:px-5">
         <p className="text-xs text-text-muted">
           Hỏi đáp học tập — không cần đăng nhập. Học sinh đăng nhập để lưu lịch sử theo session.
         </p>
@@ -163,7 +163,7 @@ export function ChatBot() {
         </p>
       )}
 
-      <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-6 py-5 scrollbar-thin">
+      <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-4 py-4 scrollbar-thin sm:px-6 sm:py-5">
         {messages.map((message, index) => (
           <ChatMessage
             key={index}
@@ -188,7 +188,7 @@ export function ChatBot() {
       </div>
 
       {error && (
-        <div className="flex shrink-0 items-center gap-3 border-t border-border-soft px-6 py-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border-soft px-4 py-2 sm:gap-3 sm:px-6">
           <p className="text-sm text-red-600">{error}</p>
           {lastFailedMessage && (
             <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
@@ -198,7 +198,7 @@ export function ChatBot() {
         </div>
       )}
 
-      <div className="shrink-0 border-t border-border bg-surface-raised px-6 py-3">
+      <div className="shrink-0 border-t border-border bg-surface-raised px-4 py-3 sm:px-6">
         <ChatInputBar
           value={input}
           onChange={setInput}

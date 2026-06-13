@@ -20,7 +20,7 @@ export function PageContainer({
 }: PageContainerProps) {
   return (
     <div className={cn("page-scroll", className)}>
-      <div className={cn("mx-auto w-full p-6", MAX_WIDTH[maxWidth])}>{children}</div>
+      <div className={cn("mx-auto w-full p-4 sm:p-6 lg:p-8", MAX_WIDTH[maxWidth])}>{children}</div>
     </div>
   );
 }

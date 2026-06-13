@@ -8,6 +8,12 @@ import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  DataTableViewport,
+  MobileDataCard,
+  MobileDataList,
+  MobileDataRow,
+} from "@/components/ui/responsive-data";
 import { StatusMessage } from "@/components/ui/StatusMessage";
 import { useRequireRole } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/api";
@@ -100,7 +106,7 @@ export default function AdminTeachersPage() {
         description="Thêm, sửa, xóa tài khoản giáo viên. Mật khẩu mặc định do admin cấu hình trong env."
       />
 
-      <form onSubmit={handleCreate} className="card grid gap-4 p-5 md:grid-cols-3">
+      <form onSubmit={handleCreate} className="card grid gap-4 p-4 sm:p-5 sm:grid-cols-2 lg:grid-cols-3">
         <Input
           placeholder="Tên đăng nhập"
           value={username}
@@ -112,7 +118,7 @@ export default function AdminTeachersPage() {
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
         />
-        <Button type="submit">
+        <Button type="submit" className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto">
           <UserPlus size={16} />
           Thêm giáo viên
         </Button>
@@ -127,7 +133,7 @@ export default function AdminTeachersPage() {
         </StatusMessage>
       )}
 
-      <div className="table-wrap mt-8 overflow-x-auto">
+      <DataTableViewport className="mt-8">
         <table className="min-w-full text-sm">
           <thead className="table-head">
             <tr>
@@ -181,7 +187,44 @@ export default function AdminTeachersPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableViewport>
+
+      <MobileDataList className="mt-8">
+        {teachers.map((teacher) => (
+          <MobileDataCard key={teacher.id}>
+            <MobileDataRow label="Username">{teacher.username}</MobileDataRow>
+            <MobileDataRow label="Họ tên">{teacher.full_name ?? "—"}</MobileDataRow>
+            <MobileDataRow label="Trạng thái">
+              <span
+                className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  teacher.is_active
+                    ? "border border-green-200 bg-green-50 text-green-700"
+                    : "border border-border bg-surface-inset text-text-muted"
+                }`}
+              >
+                {teacher.is_active ? "Hoạt động" : "Vô hiệu"}
+              </span>
+            </MobileDataRow>
+            <MobileDataRow label="Đổi MK lần đầu">
+              {teacher.must_change_password ? "Chưa" : "Đã đổi"}
+            </MobileDataRow>
+            <div className="flex flex-wrap gap-2 border-t border-border-soft pt-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => handleToggleActive(teacher)}>
+                {teacher.is_active ? "Vô hiệu hoá" : "Kích hoạt"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => handleResetPassword(teacher.id)}>
+                Reset MK
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(teacher.id)}>
+                Xóa
+              </Button>
+            </div>
+          </MobileDataCard>
+        ))}
+        {teachers.length === 0 && (
+          <p className="py-8 text-center text-sm text-text-muted">Chưa có giáo viên nào.</p>
+        )}
+      </MobileDataList>
     </PageContainer>
   );
 }
